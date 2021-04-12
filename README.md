@@ -26,6 +26,7 @@ This a complex Perl script that uses data from a variety of sources stored in a 
 Once the script is run, and edits are made to the Circos configuration file, the images are generated using:
 
 `cd ~/software/circos-0.69-5/`
+
 `./bin/circos -conf circos_F1157CHC.conf -outputfile circosF1157CHC`
 
 
