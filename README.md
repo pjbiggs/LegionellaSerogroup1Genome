@@ -6,7 +6,7 @@ A repository to accompany our manuscript on the *Legionella longbeachae* serogro
 
 **Title**: "Extensive epigenetic modification with large-scale chromosomal and plasmid recombination characterise the *Legionella longbeachae* serogroup 1 genome"
 
-**Authors**: Sandy Slow, Trevor Anderson, David R. Murdoch, Samuel Bloomfield, David Winter and Patrick J. Biggs*
+**Authors**: Sandy Slow, Trevor Anderson, David R. Murdoch, Samuel Bloomfield, David Winter and Patrick J. Biggs
 
 This repository contains the following files and scripts:
 * `LegionellaCircos.pl`
@@ -40,7 +40,7 @@ Once the script is run, and edits are made to the Circos configuration file (`ci
 
 ### circos_F1157CHC.conf
 
-This is the Circos configuration file to show the structure of the file needed to generate the Circos plot.  There are many tracks with each one requiring its own data file, as well as general files to set up the image, and the tickmarks amongst others.  If this level of detail is of interest, please contact the author for more information. 
+This is the Circos configuration file to show the structure of the file needed to generate the Circos plot.  There are many tracks with each one requiring its own data file, as well as general files to set up the image, and the tickmarks amongst others.  If this level of detail is of interest, please contact the author (@pjbiggs) for more information. 
 
 
 ### methylome_analyses.Rmd
