@@ -5,6 +5,7 @@
 A repository to accompany our manuscript on the *Legionella longbeachae* serogroup 1 genome, the most clinically significant *Legionella* species in New Zealand, causing around two-thirds of all notified cases of Legionnaires’ disease.
 
 **Title**: "Extensive epigenetic modification with large-scale chromosomal and plasmid recombination characterise the *Legionella longbeachae* serogroup 1 genome"
+
 **Authors**: Sandy Slow, Trevor Anderson, David R. Murdoch, Samuel Bloomfield, David Winter and Patrick J. Biggs*
 
 This repository contains the following files and scripts:
@@ -18,7 +19,7 @@ This repository contains the following files and scripts:
 The following software is required to run these scripts.
 
 * Perl -- a relatively recent version of Perl, 5.20 and above.  Packages required are `Getopt::Long`, `Bio::SeqIO`, `Bio::Seq` and `DBI` (for connections to MySQL).
-* R version 3.5 and above.  This has to be directly accessible from the path. Packages required are `ggplot2`, `reshape`, `srtringr` and `ggpubr`. 
+* R -- version 3.5 and above.  This has to be directly accessible from the path. Packages required are `ggplot2`, `reshape`, `srtringr` and `ggpubr`. 
 * MySQL
 * Reputer -- available from https://bibiserv.cebitec.uni-bielefeld.de/reputer.  Within the suite, the program `repfind` is used.
 * Circos -- a relatively recent version of Circos (available from http://circos.ca/software/), version 0.69.5 and above.
