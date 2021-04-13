@@ -1,5 +1,11 @@
 # LegionellaSerogroup1Genome
-A repository to accompany our manuscript on different characteristics of the *Legionella longbeachae* serogroup 1 genome.
+
+## Overview
+
+A repository to accompany our manuscript on the *Legionella longbeachae* serogroup 1 genome, the most clinically significant *Legionella* species in New Zealand, causing around two-thirds of all notified cases of Legionnaires’ disease.
+
+**Title**: "Extensive epigenetic modification with large-scale chromosomal and plasmid recombination characterise the *Legionella longbeachae* serogroup 1 genome"
+**Authors**: Sandy Slow, Trevor Anderson, David R. Murdoch, Samuel Bloomfield, David Winter and Patrick J. Biggs*
 
 This repository contains the following files and scripts:
 * `LegionellaCircos.pl`
