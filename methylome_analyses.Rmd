@@ -1,0 +1,218 @@
+---
+title: Methylome analysis for Slow et al Legionalla longbeachae genome
+#author: David Winter
+#date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+    pdf_document:
+        latex_engine: xelatex
+monofont : FreeMono
+mainfont: "Linux Libertine O"
+---
+
+# Background
+
+This document records the methods and code use to produce the methylome
+analysis described in the body of the paper.
+
+As a first step, we define a number of R functions that will be used in further
+analyses.
+
+```{r}
+
+library(reshape)
+library(ggplot2)
+library(stringr)
+library(ggpubr)
+
+
+theme_set(theme_pubr())
+read_bed <- function(fname){
+    res <- read.table(fname, sep="\t", stringsAsFactors=FALSE)
+    names(res)[1:3] <- c("chrom", "start", "end")
+    res
+}
+
+get_locus_tag <- function(x){
+    str_match(x, ";locus_tag=(B0B39_\\d+)")[,2]
+}
+
+methyl_palette <- c(
+ m6A_light = "#a6cee3", 
+ m6A = "#1f78b4",
+ m4C_light = "#b2df8a",
+ m4C = "#33a02c"
+)
+
+cog_cols <- read.table("../COGcoloursExtra.txt", 
+                       comment.char="'", sep="\t", header=TRUE)
+cog_pal <- structure(cog_cols$InitialHexColorCode, 
+                     .Names=as.character(cog_cols$COG))
+
+```
+
+# Modified bases calculated in genome windows
+
+The portion of modifified "A" and "C" bases was calculated over 1kb windows, 
+using bedtools to calculate both the denominator (number of each base) and the
+numerate (the number that were modified)
+
+
+```sh
+bedtools makewindows -w 1000 -g Legionella_both_mods.genome > 1kb_windows.bed
+bedtools intersect -c -a 1kb_windows.bed -b m6A.gff > m6A_hist.bed
+bedtools intersect -c -a 1kb_windows.bed -b m4C.gff > m4C_hist.bed
+bedtools nuc -fi Legionella_both_mods.fa -bed 1kb_windows.bed > nuc_content.tsv
+```
+
+Appropriate values for each modification were calculated in R.
+```{r}
+nuc_content_windows <- read.table("nuc_content.tsv", stringsAsFactors=FALSE)
+nA <- rowSums(nuc_content_windows[,c(6,9)])
+nC <- rowSums(nuc_content_windows[,7:8])
+m6A <- read_bed("m6A_hist.bed")
+m6A$f <- m6A$V4 / nA
+m4C <- read_bed("m4C_hist.bed")
+m4C$f <- m4C$V4 / nC
+```
+
+These values were combiend to visualise the distribution of each modification
+across the chromosome and plasmid sequence.
+
+```{r}
+both_mods <- data.frame(m4C[,-4], m6A=m6A$f)
+names(both_mods)[4] <- "m4C"
+molten_mods <- melt(both_mods, id.vars=c("chrom", "start", "end")) 
+molten_mods$chrom <- factor(molten_mods$chrom, levels=c("CP020894.3", "CP020894.2"))
+
+p_distr <- ggplot(molten_mods, aes(start, value, colour=variable)) + 
+    geom_step() +
+    facet_grid(variable~chrom, space="free", scales="free") +
+    scale_y_continuous("Porpotion of bases modified") +
+    scale_x_continuous("Position (Mb)", label=function(x) x/1e6) + 
+    scale_colour_manual(values=methyl_palette)
+
+ggsave("figure_elements/Figure_methyl_chrom.svg", p_distr)
+ggsave("figure_elements/Figure_methyl_chrom.png", p_distr)
+```
+
+
+## Repeat protein
+
+The most striking result in the above plots is the "spike" in m6A methylation
+near to the start of the chromosome. To investigate this further we identified
+genes within this window and its immediate neighbours. First by writing a
+bed file from R.
+
+
+```{r}
+most_a <- m6A[which.max(m6A$f),]
+most_a$start <- most_a$start - 1000
+most_a$end <- most_a$end + 1000
+write.table(most_a, row.names=FALSE, col.names=FALSE, 
+            quote=FALSE, sep="\t", "m6A_spike.bed")
+```
+
+Then by isolating overlapping genes with bedtools.
+
+```sh
+bedtools intersect -a CDS.gff  -b m6A_spike.bed  > spike_CDS.gff
+```
+
+The previcise location (and strand) of each modification was then plotted,
+showing the over-representation of modified "A" in a repeat-rich protein.
+
+```{r}
+mod_by_base <- read.table("spike_per_base.gff", sep="\t")
+mod_by_base$height <- ifelse(mod_by_base$V6 == "+", .4, -.4)
+
+genes <- read.table("spike_CDS.gff", sep="\t")
+genes$LT <- str_match(genes$V9, ";locus_tag=(B0B39_\\d+)")[,2]
+
+p_lollypop <- ggplot() + 
+    geom_hline(yintercept=0) +
+    geom_segment(data=mod_by_base, aes(x=V4, xend=V4, y=0, yend=height)) +
+    geom_rect(data=genes, aes(xmin=V4, xmax=V5, ymin=-0.15, ymax=0.15), 
+              fill="white", colour='black') +
+    geom_text(data=genes, aes(x=(V4+V5)/2, y=0, label=LT))+
+    geom_point(data=mod_by_base, aes(x=V4, y=height), 
+               fill=methyl_palette['m6A'], size=5, shape=21) + 
+    scale_x_continuous("Position in chromosome (Mb)", label=function(x) x/1e6) +
+    theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+ggsave("figure_elements/lollypops.png", p_lollypop)
+ggsave("figure_elements/lollypops.pdf", p_lollypop)
+```
+
+
+#Functional analyses
+
+We tested whether methylated C bases may be associated with protein coding
+genes, or particular functions of those genes. We first focused on comparing the
+coding and non-coding portions of the genome. As a first step, we calculated the
+toal number of "C" bases avaiable to be modified in both coding non non-coding
+portions of the genome
+
+
+```sh
+bedtools complement -i CDS.bed -g CP020894_v3.size  > intergenic.bed
+bedtools nuc -fi CP020894_v3.fa -bed intergenic.bed | awk '{s+=$8; s+=$7}END{print s}'
+bedtools nuc -fi CP020894_v3.fa -bed CDS.bed | awk '{s+=$8; s+=$8}END{print s}'
+```
+
+With the total number of bases calculated, we identified the number modified in
+each genomic component. (cut, sort and unique ensure each base is counted only
+once).
+
+```
+bedtools intersect -a ../m4C.bed  -b intergenic.bed  | cut -f1,2 | sort | uniq | wc -l
+bedtools intersect -a ../m4C.bed  -b CDS.bed  | cut -f1,2 | sort | uniq  | wc -l
+```
+
+That gives the following numbers.
+
+```{r}
+by_base <- read.csv("CDS_v_intergenic.csv")
+p_dynamite <- ggplot(by_base, aes(site_type, p_mod, ymax=upper, ymin=lower)) + 
+    geom_col(fill=methyl_palette["m4C"], colour='black', size=0.8) + 
+    geom_errorbar(width=0.3, size=1) +
+    xlab("Site type") +
+    ylab("Proportion of 'C's modified")
+
+ggsave("figure_elements/dynamite.png", p_dynamite)
+ggsave("figure_elements/dynamite.pdf", p_dynamite)
+```
+    
+Finally, we looked for any differences between in methylation between genes 
+assigned to difference COGs. Here we plot the proportion of "C"s modified in
+each gene, shaded by the COG classification assigned to that gene.
+
+
+```{r}
+meth_by_cog <- read.csv("sup_data/meth_by_COG.csv")
+p_cog <- ggplot(meth_by_cog, aes(COG, p_mod, fill=COG)) + 
+    geom_boxplot(outlier.shape = NA) +  #only plot outliers once
+    geom_jitter(width=0.1, height=0, shape=21, colour='black') +  
+    scale_y_continuous("proportion of 'C's modified") +
+    scale_fill_manual(values=cog_pal) +
+    theme(legend.position="none")
+
+
+p_cog <- ggplot(meth_by_cog, aes(cog_name, p_mod, fill=COG)) + 
+    geom_boxplot(outlier.shape = NA) +  #only plot outliers once
+    geom_jitter(width=0.1, height=0, shape=21, colour='black') +  
+    scale_y_continuous("proportion of 'C's modified") +
+    xlab("") +
+    scale_fill_manual(values=cog_pal) +
+    theme(legend.position="none") +
+    coord_flip()
+
+
+ggsave("figure_elements/COG_rainbow.png", p_cog)
+ggsave("figure_elements/COG_rainbow.pdf", p_cog)
+ggsave("figure_elements/COG_rainbow.svg", p_cog)
+```
+
+`
+
